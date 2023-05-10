@@ -1,4 +1,5 @@
 #include <compat/vsomeip/vsomeip.hpp>
+#include "example_struct.h" // for type deifinition, serialization and deserialization of example_struct
 #include <iostream>
 #include <cstring>
 #include <iomanip>
@@ -31,22 +32,14 @@ void run()
 	req_->set_method(METHOD_ID);
 	
 	// populate the request payload
-	std::shared_ptr< vsomeip::payload > req_payload = vsomeip::runtime::get()->create_payload();
+    	std::shared_ptr< vsomeip::payload > req_payload = vsomeip::runtime::get()->create_payload();
 	std::vector<vsomeip::byte_t> client_struct;
-	// first 4 bytes for id
-	for (int i{}; i < 4; ++i)
-	{
-		client_struct.push_back(1 % 256); // just to keep numbers between 0 - 255
-	}
-	// last 50 bytes for msg
-	char client_struct_msg[] = "Hello, a ping from client!";
-       // last 50 bytes for msg
-	for (int i{}; i < strlen(client_struct_msg); ++i)
-	{
-    		client_struct.push_back(client_struct_msg[i]);
-    	}
-    	// just for surity
-    	client_struct.push_back(0);
+	example_struct client_example_struct;
+	client_example_struct.id = 1;
+	std::strcpy(client_example_struct.msg,"Hello, a ping from client!");
+	
+	// serialize and send
+	serialize_example_struct(client_example_struct, client_struct);
     	req_payload->set_data(client_struct);
     	req_->set_payload(req_payload);
     	app->send(req_, true);
@@ -63,21 +56,10 @@ void on_message(const std::shared_ptr<vsomeip::message>& res_)
 	// display the client and session
 	std::cout << "Received message with client: " << res_->get_client() << ", session: " << res_->get_session() << std::endl;
 
-	// parse received payload as struct
-	// 1st 4 bytes for id
-    	int server_struct_id = 0;
-    	for (vsomeip::length_t i {}; i < 4; ++i)
-    	{
-    		server_struct_id = (server_struct_id << 8) + (int)*(res_payload->get_data()); // shift 8 bits left (1 bytes) and add next byte
-    	} 
-    	// last 50 bytes for msg
-	char server_struct_msg[50]; 
-	int ind {};
-	for (vsomeip::length_t i {4}; i < len; ++i)
-	{
-    		server_struct_msg[ind++] = (char)*(res_payload->get_data() + i);
-    	}
-	std::cout << " Received from server \n id : " << "0x" << std::setfill('0') << std::setw(2) << std::right << std::hex << server_struct_id << "\n msg: " << server_struct_msg << "\n";
+	// parse received payload as example_struct
+    	example_struct server_example_struct;
+    	deserialize_example_struct(server_example_struct, res_payload);
+	std::cout << " Received from server \n id : " << "0x" << std::setfill('0') << std::setw(2) << std::right << std::hex << server_example_struct.id << "\n msg: " << server_example_struct.msg << "\n";
 	
 }
 

@@ -10,9 +10,11 @@ find_package( Boost 1.55 COMPONENTS system thread log REQUIRED )
 include_directories (
     ${Boost_INCLUDE_DIR}
     ${VSOMEIP_INCLUDE_DIRS}
+    include
 )
 
 add_executable(service-example src/service-example.cpp)
 add_executable(client-example src/client-example.cpp)
+
 target_link_libraries(service-example vsomeip ${Boost_LIBRARIES})
 target_link_libraries(client-example vsomeip ${Boost_LIBRARIES})
